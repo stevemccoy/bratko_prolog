@@ -4,6 +4,7 @@ del(Item, [Item | List], List).
 del(Item, [First | List1], [First | List2]) :-
 	del(Item, List1, List2).
 
+% List concatenation.
 conc([], L, L).
 conc([H | Tail], L1, [H | L2]) :-
 	conc(Tail, L1, L2).
@@ -17,7 +18,8 @@ lastItem2(X, [_ | Tail]) :-
 	
 append(X, L1, L2) :-
 	conc(L1, [X], L2).
-	
+
+% S is a sub-sequence of L.	
 sublist(S, L) :-
 	conc(_, L2, L),
 	conc(S, _, L2).
@@ -34,12 +36,11 @@ permutation([Head | Tail], PermList) :-
 % Partition list of numbers based on given pivot element.
 % partition(InputList, Pivot, LowPart, HighPart).
 
-% THIS NEEDS TO WORK FOR ATOMS AS WELL AS NUMBERS.
-
 partition([], _, [], []).
 
 partition([X | Tail], Pivot, [X | LowPart], HighPart) :-
-	X < Pivot,
+	compare_terms(X, Pivot, Delta),
+	Delta > 0,
 	!,
 	partition(Tail, Pivot, LowPart, HighPart).
 
@@ -82,5 +83,4 @@ subset(L, S) :-
 	quicksort(L1, L2),
 	dividelist(L2, S1, _).
 	
-
-
+	

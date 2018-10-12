@@ -4,7 +4,15 @@
 list([]).
 list([_ | _]).
 
-% compare(X1, X2, Delta)
+% term_type(Term, Type)
+
+term_type(Term, 1) :- number(Term).
+term_type(Term, 2) :- atom(Term).
+term_type(Term, 3) :- string(Term).
+term_type(Term, 4) :- list(Term).
+
+
+% compare_terms(X1, X2, Delta) - Delta is +ve if X1 < X2, 0 if they are equal, -ve if X1 > X2.
 
 compare_terms(X, X, 0) :-
 	!.
@@ -15,12 +23,6 @@ compare_terms(X1, X2, Delta) :-
 	!,
 	Delta is X2 - X1.
 
-compare_terms(S1, S2, Delta) :-
-	string(S1),
-	string(S2),
-	!,
-	string_compare(S1, S2, Delta).
-	
 compare_terms(A1, A2, Delta) :-
 	atom(A1),
 	atom(A2),
@@ -29,13 +31,26 @@ compare_terms(A1, A2, Delta) :-
 	atom_codes(A2, L2),
 	list_compare(L1, L2, Delta).
 
+compare_terms(S1, S2, Delta) :-
+	string(S1),
+	string(S2),
+	!,
+	string_compare(S1, S2, Delta).
+	
 compare_terms(L1, L2, Delta) :-
 	list(L1),
 	list(L2),
 	!,
 	list_compare(L1, L2, Delta).
 
-
+	
+compare_terms(X1, X2, Delta) :-
+	term_type(X1, T1),
+	term_type(X2, T2),
+	!,
+	Delta is T2 - T1.
+	
+	
 % list_compare(L1, L2, Delta) - Delta is +ve if L1 < L2, 0 if they are equal, -ve if L1 > L2.
 
 list_compare([], [], 0).
