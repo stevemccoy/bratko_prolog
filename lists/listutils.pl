@@ -1,3 +1,4 @@
+% Utilities for manipulating lists and their contents.
 
 % Delete an item from a list.
 del(Item, [Item | List], List).
@@ -66,7 +67,43 @@ oddlength([_,_ | L]) :-
 	oddlength(L).
 	
 
-	
+% reverse(List1, List2) - List2 is the list of elements in List1 but in reversed order.
+
+my_reverse([], []).
+my_reverse(List1, [X | Tail]) :-
+	conc(Start, [X], List1),
+	my_reverse(Start, Tail),
+	!.
+
+palindrome(List) :-
+	my_reverse(List, List).
+
+
+shift([], []).
+shift([X | Tail], List2) :-
+	conc(Tail, [X], List2).
+
+
+% translate(Digits, Names)
+
+translate([], []).
+translate([D | Tail], [DName | TailNames]) :-
+	means(D, DName),
+	translate(Tail, TailNames).
+
+means(0, zero).
+means(1, one).
+means(2, two).
+means(3, three).
+means(4, four).
+means(5, five).
+means(6, six).
+means(7, seven).
+means(8, eight).
+means(9, nine).
+
+
+
 % dividelist(List, List1, List2) - Decompose List into List1 and List2.	
 
 dividelist([], [], []).
@@ -83,4 +120,32 @@ subset(L, S) :-
 	quicksort(L1, L2),
 	dividelist(L2, S1, _).
 	
-	
+
+% Item in a list indexed by integer.
+
+% get_item(Index, List, Item)
+
+get_item(1, [Item | _], Item).
+get_item(N, [_ | Tail], Item) :-
+	N > 1,
+	M is N -1,
+	get_item(M, Tail, Item).
+
+% set_item(Index, Before, Item, After)
+
+set_item(1, [_ | Tail], Item, [Item | Tail]).
+set_item(N, [Head | Tail], Item, [Head | Tail2]) :-
+	N > 1,
+	M is N - 1,
+	set_item(M, Tail, Item, Tail2).
+
+
+% Remove any instances of a value from a list.
+
+remove_all(_, [], []).
+remove_all(V, [V | Tail], TailAfter) :-
+	!,
+	remove_all(V, Tail, TailAfter).
+remove_all(V, [H | Tail], [H | TailAfter]) :-
+	remove_all(V, Tail, TailAfter).
+
