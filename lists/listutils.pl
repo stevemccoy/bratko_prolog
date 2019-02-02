@@ -33,7 +33,6 @@ permutation([Head | Tail], PermList) :-
 	del(Head, PermList, PermTail).
 
 
-	
 % Partition list of numbers based on given pivot element.
 % partition(InputList, Pivot, LowPart, HighPart).
 
@@ -103,7 +102,6 @@ means(8, eight).
 means(9, nine).
 
 
-
 % dividelist(List, List1, List2) - Decompose List into List1 and List2.	
 
 dividelist([], [], []).
@@ -114,12 +112,13 @@ dividelist([X | Tail], List1, [X | Tail2]) :-
 
 	
 % S is a subset of list L.	This doesn't work yet for generating all subsets.
-subset(L, S) :-
-	setof(M, member(M, L), L1),
-	quicksort(S, S1),
-	quicksort(L1, L2),
-	dividelist(L2, S1, _).
-	
+
+subset([], []).
+subset([H | Tail], [H | Sub]) :-
+	subset(Tail, Sub).
+subset([_ | Tail], Sub) :-
+	subset(Tail, Sub).
+
 
 % Item in a list indexed by integer.
 
@@ -149,3 +148,20 @@ remove_all(V, [V | Tail], TailAfter) :-
 remove_all(V, [H | Tail], [H | TailAfter]) :-
 	remove_all(V, Tail, TailAfter).
 
+
+% Zip the corresponding elements from two lists together.
+
+zip_lists([], [], []).
+zip_lists([Item1 | Tail1], [Item2 | Tail2], [[Item1, Item2] | ZippedTail]) :-
+	length(Tail1, N),
+	length(Tail2, N),
+	zip_lists(Tail1, Tail2, ZippedTail).
+
+
+% Flatten terms in list.
+
+flatten([], []).
+flatten([[H | T] | Rest], [ H | Result]) :-
+	flatten(T, TFlat),
+	flatten(Rest, RestFlat),
+	conc(TFlat, RestFlat, Result).
