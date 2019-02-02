@@ -251,6 +251,7 @@ display_cell_slice(Cell, Slice, String) :-
 	conc(Padding, L, L2),
 	strcat([" " | L2], String).
 
+position(_).
 
 clear :-
 	make_grid(Grid),
@@ -273,11 +274,88 @@ moves([R/C/V | Tail]) :-
 
 
 % Prime a puzzle from initial layout.
-convert_list([], []).
-convert_list([V | Tail], )
+% setup_sudoku(Layout, Grid)
 
-findall(Row/)
+% *** EVERYTHING BELOW HERE NEEDS TESTING....   ***
 
-findall(Col/V, (coordinates(Columns), member(Col, Columns), get_indexed_item(Col, Row, V), integer(V)), RowMoves)
 
+setup_sudoku(Layout, Grid) :-
+	make_grid(Grid0),
+	reduce_by_rows(Layout, Grid0, Grid).
+
+reduce_by_rows(Layout, GridBefore, GridAfter) :-
+	findall(RowIndex/ColumnIndex/Value, (
+		coordinates(RowIndices),
+		member(RowIndex, RowIndices),
+		get_indexed_item(RowIndex, Layout, Row),
+		coordinates(ColumnIndices),
+		member(ColumnIndex, ColumnIndices),
+		get_indexed_item(ColumnIndex, Row, Value),
+		integer(Value)
+	), AllMoves),
+	reduce_by_moves(GridBefore, AllMoves, GridAfter).
+
+reduce_by_moves(Grid, [], Grid).
+reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
+	resolve_square(R/C, GridBefore, V, Grid2),
+	reduce_by_moves(Grid2, Tail, GridAfter).
+
+
+empty_layout([
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_]
+]).
+
+dummy_layout([
+	[5,_,_, 9,_,_, _,_,_],
+	[_,1,_, _,_,_, _,_,_],
+	[_,_,_, _,5,_, _,_,_],
+	[_,_,_, 4,_,_, _,8,_],
+	[_,_,_, _,_,_, _,_,_],
+	[_,_,_, _,_,_, _,_,_],
+	[3,_,_, 7,_,_, _,_,_],
+	[_,_,6, _,_,_, _,_,_],
+	[_,_,_, _,_,_, 2,_,_]
+]).
+
+
+% Determine if the sudoku puzzle grid is a solved state.
+
+is_solved_grid([]).
+is_solved_grid([Row | TailRows]) :-
+	is_solved_row(Row),
+	is_solved_grid(TailRows).
+
+is_solved_row([]).
+is_solved_row([[Value] | Tail]) :-
+	integer(Value),
+	is_solved_row(Tail).
+
+
+% Convert from grid back to layout of fully resolved cells.
+
+layout_from_grid(Grid, After) :-
+	empty_layout(Before),
+	findall(RowIndex/ColumnIndex/Value, (
+		coordinates(RowIndices),
+		member(RowIndex, RowIndices),
+		get_indexed_item(RowIndex, Grid, Row),
+		coordinates(ColumnIndices),
+		member(ColumnIndex, ColumnIndices),
+		get_indexed_item(ColumnIndex, Row, [Value]),
+		integer(Value)
+	), AllMoves),
+	setup_layout_from_moves(Before, AllMoves, After).
+
+setup_layout_from_moves(Layout, [], Layout).
+setup_layout_from_moves(Before, [R/C/V | OtherMoves], After) :-
+	set_square(R/C, Before, V, Layout),
+	setup_layout_from_moves(Layout, OtherMoves, After).
 
