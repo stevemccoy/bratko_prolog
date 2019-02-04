@@ -161,7 +161,14 @@ zip_lists([Item1 | Tail1], [Item2 | Tail2], [[Item1, Item2] | ZippedTail]) :-
 % Flatten terms in list.
 
 flatten([], []).
-flatten([[H | T] | Rest], [ H | Result]) :-
-	flatten(T, TFlat),
+flatten([[] | T], Result) :-
+	!,
+	flatten(T, Result).
+flatten([[H | T] | Rest], Result) :-
+	!,
+	flatten([H | T], HFlat),
 	flatten(Rest, RestFlat),
-	conc(TFlat, RestFlat, Result).
+	conc(HFlat, RestFlat, Result).
+flatten([H | T], [H | TFlat]) :-
+	flatten(T, TFlat).
+
