@@ -172,3 +172,58 @@ flatten([[H | T] | Rest], Result) :-
 flatten([H | T], [H | TFlat]) :-
 	flatten(T, TFlat).
 
+
+% Map list elements from one list through a named function(X,Y), producing a second list.
+my_map_list([], _, []).
+my_map_list([X | InTail], Function, [Y | OutTail]) :-
+	Goal =.. [Function, X, Y],
+	Goal,
+	my_map_list(InTail, Function, OutTail).
+
+sum(X, Y, Z) :-
+	Z is X + Y.
+
+
+% Aggregate elements of a list successively by a named function(X,Y,Z), producing a scalar result.
+my_aggregate_list([A], _, A).
+my_aggregate_list([X, Y | InTail], Function, Result) :-
+	Goal =.. [Function, X, Y, Z],
+	Goal,
+	my_aggregate_list([Z | InTail], Function, Result).
+
+% Map adjacent pairs of list items onto the result of applying named function(X,Y,Z) to them.
+my_map_adjacent_pairs([_], _, []).
+my_map_adjacent_pairs([X, Y | InTail], Function, [Z | OutTail]) :-
+	Goal =.. [Function, X, Y, Z],
+	Goal,
+	my_map_adjacent_pairs([Y | InTail], Function, OutTail).
+
+
+maxlist(L, M) :-
+	my_aggregate_list(L, max, M).
+
+sumlist(L, S) :-
+	my_aggregate_list(L, sum, S).
+
+% Truth value of comparison between X and Y.
+ordered_pair(X, Y, true) :- X =< Y, !.
+ordered_pair(_, _, false).
+
+% Generate a vector of repeat values gen_repeat_values(Value, Count, List).
+gen_repeat_values(_, 0, []) :- !.
+gen_repeat_values(Value, Count, [Value | Rest]) :-
+	Count2 is Count - 1,	
+	gen_repeat_values(Value, Count2, Rest).
+
+% Test vector of repeated values.
+test_repeat_values([], _, 0).
+test_repeat_values([H | T], H, Count) :-
+	test_repeat_values(T, H, Count2),
+	Count is Count2 + 1.
+
+% Test that a list is instantiated as a monotonic non-decreasing ordered sequence of values.
+ordered(List) :-
+	ground(List),
+	my_map_adjacent_pairs(List, ordered_pair, Tests),
+	test_repeat_values(Tests, true, _).
+
