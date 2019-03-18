@@ -1,4 +1,5 @@
 
+
 % list(L) - L is a list.
 
 list([]).

@@ -1,5 +1,8 @@
 % Utilities for manipulating lists and their contents.
 
+% - Depends on compare.pl for compare/3
+
+
 % Delete an item from a list.
 del(Item, [Item | List], List).
 del(Item, [First | List1], [First | List2]) :-
@@ -226,4 +229,72 @@ ordered(List) :-
 	ground(List),
 	my_map_adjacent_pairs(List, ordered_pair, Tests),
 	test_repeat_values(Tests, true, _).
+
+% subsum(Set, Sum, SubSum).
+% SubSum is a subset of Set with the sum of values Sum.
+subsum(_, 0, []).
+subsum(Set, Sum, [H | T]) :-
+	conc(_, [H | Remainder], Set),
+	subsum(Remainder, Sum2, T),
+	Sum is Sum2 + H.
+
+
+% gcd(X, Y, Z) - Z is the greatest common divisor of X and Y.
+gcd(X, X, X).
+gcd(X, Y, D) :-
+	X < Y,
+	Y1 is Y - X,
+	gcd(X, Y1, D).
+gcd(X, Y, D) :-
+	Y < X,
+	gcd(Y, X, D).
+
+% between(N1, N2, X) :- X is an integer between N1 and N2
+between(N1, N2, N1) :-
+	N1 =< N2.
+between(N1, N2, X) :-
+	N1 < N2,
+	NewN1 is N1 + 1,
+	between(NewN1, N2, X).
+
+
+% split(List, Positives, Negatives).
+
+split([], [], []).
+split([X |Tail], Positives, [X | Negatives]) :-
+	X < 0,
+	!,
+	split(Tail, Positives, Negatives).
+split([X |Tail], [X | Positives], Negatives) :-
+	split(Tail, Positives, Negatives).
+
+
+% difference(Super, Sub, Diff) - Diff is the set of elements of Super which are not in Sub.
+difference(S, [], S).
+difference(Set, [H | T], Diff) :-
+	remove_all(H, Set, D1),
+	difference(D1, T, Diff).
+
+% unifiable(List1, Term, List2) - List2 is the list of terms from List1 which can be unified with the given Term.
+unifiable([], _, []).
+unifiable([Term1 | Tail1], Term, List2) :-
+	not(Term1 = Term),
+	!,
+	unifiable(Tail1, Term, List2).
+unifiable([Term1 | Tail1], Term, [Term1 | Tail2]) :-
+	unifiable(Tail1, Term, Tail2).
+
+
+% Merge two sorted lists, producing a third list.
+merge([], L, L).
+merge(L, [], L).
+merge([A | AT], [B | BT], [A | LT]) :-
+	compare_terms(A, B, Delta),
+	Delta >= 0,
+	!,
+	merge(AT, [B | BT], LT).
+merge(AL, [B | BT], [B | LT]) :-
+	merge(AL, BT, LT),
+	!.
+
 
