@@ -278,12 +278,26 @@ moves([R/C/V | Tail]) :-
 
 % *** EVERYTHING BELOW HERE NEEDS TESTING....   ***
 
+% 1. Define structure for layout, moves, grid.
+% 2. Capture initial state of the puzzle grid as a layout.
+% 3. Convert layout to a set of moves, then use each move to reduce the unconstrained grid and propagate the solution to the puzzle.
+% 4. Display the state of the puzzle as a grid of options, or as a layout of fully resolved values per square.
+
+% 5. Capture image of the initial layout from camera; detect grid lines and use to locate and rescale characters; OCR technology to classify each of the detected characters and populate an initial layout for puzzle; solve and produce an image overlay showing the solution.
+
+
+
+
 
 setup_sudoku(Layout, Grid) :-
 	make_grid(Grid0),
 	reduce_by_rows(Layout, Grid0, Grid).
 
 reduce_by_rows(Layout, GridBefore, GridAfter) :-
+	layout_moves(Layout, AllMoves),
+	reduce_by_moves(GridBefore, AllMoves, GridAfter).
+
+layout_moves(Layout, AllMoves) :-
 	findall(RowIndex/ColumnIndex/Value, (
 		coordinates(RowIndices),
 		member(RowIndex, RowIndices),
@@ -292,8 +306,7 @@ reduce_by_rows(Layout, GridBefore, GridAfter) :-
 		member(ColumnIndex, ColumnIndices),
 		get_indexed_item(ColumnIndex, Row, Value),
 		integer(Value)
-	), AllMoves),
-	reduce_by_moves(GridBefore, AllMoves, GridAfter).
+	), AllMoves).
 
 reduce_by_moves(Grid, [], Grid).
 reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
