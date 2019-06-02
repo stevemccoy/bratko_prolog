@@ -223,7 +223,11 @@ display_grid(Grid) :-
 
 
 display_grid(Grid, StringList) :-
-	findall(RS, (member(Row, Grid), display_row(Row, RSL), member(RS, RSL)), StringList).
+	findall(RS, (
+		member(Row, Grid), 
+		display_row(Row, RSL), 
+		member(RS, RSL)
+	), StringList).
 
 % Display row.
 
@@ -350,6 +354,18 @@ is_solved_row([]).
 is_solved_row([[Value] | Tail]) :-
 	integer(Value),
 	is_solved_row(Tail).
+
+% Display move list.
+
+display_moves([]).
+display_moves([R/C/V | Moves]) :-
+	write('row:'),
+	write(R),
+	write(', col:'),
+	write(C),
+	write(', value:'),
+	writeln(V),
+	display_moves(Moves).
 
 
 % Convert from grid back to layout of fully resolved cells.
