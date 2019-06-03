@@ -125,24 +125,28 @@ set_square(R/C, Before, V, After) :-
 
 % Resolve given square to a single value.
 
-resolve_square(R/C, Before, V, After) :-
+resolve_square(R/C, Before, V, After, AllExtras) :-
 	% Make sure V is still an option for this square.
 	get_square(R/C, Before, Cell),
 	member(V, Cell),
 	!,
-	remove_from_row(R, Before, V, A1),
+	remove_from_row(R, Before, V, A1, RowExtras),
 	remove_from_column(C, A1, V, A2),
+	scan_for_column_extras(A1, A2, C, V, ColExtras),
 	convert_position(R/C, G/_),
 	remove_from_group(G, A2, V, A3),
+	scan_for_group_extras(A2, A3, G, V, GroupExtras),
+	conc(RowExtras, ColExtras, X1),
+	conc(X1, GroupExtras, AllExtras),
 	% Having removed V from everywhere else, add it back where needed.
 	set_square(R/C, A3, [V], After).
 
-
 % propagate_in_row(R/C, Before, Value, After)
 
-remove_from_row(R, GridBefore, V, GridAfter) :-
+remove_from_row(R, GridBefore, V, GridAfter, Extras) :-
 	get_indexed_item(R, GridBefore, RowBefore),
 	remove_from_row(RowBefore, V, RowAfter),
+	find_row_extras(R, RowBefore, RowAfter, V, Extras),
 	set_indexed_item(R, GridBefore, RowAfter, GridAfter).
 
 remove_from_row([], _, []).
@@ -151,18 +155,17 @@ remove_from_row([Cell1 | Tail1], Value, [Cell2 | Tail2]) :-
 	remove_from_row(Tail1, Value, Tail2).
 
 
-remove_from_row_col(RowBefore, ColIndex, Value, RowAfter) :-
-	get_indexed_item(ColIndex, RowBefore, Cell1),
-	remove_all(Value, Cell1, Cell2),
-	set_indexed_item(ColIndex, RowBefore, Cell2, RowAfter).
-
-
 % remove_from_column(C, GridBefore, Value, GridAfter)
 
 remove_from_column(_, [], _, []).
 remove_from_column(C, [RowBefore | TailBefore], Value, [RowAfter | TailAfter]) :-
 	remove_from_row_col(RowBefore, C, Value, RowAfter),
 	remove_from_column(C, TailBefore, Value, TailAfter).
+
+remove_from_row_col(RowBefore, ColIndex, Value, RowAfter) :-
+	get_indexed_item(ColIndex, RowBefore, Cell1),
+	remove_all(Value, Cell1, Cell2),
+	set_indexed_item(ColIndex, RowBefore, Cell2, RowAfter).
 
 
 % remove_from_group(G, GridBefore, Value, GridAfter)
@@ -178,6 +181,77 @@ remove_from_group_positions(G, [Pos1 | Others], V, Before, After) :-
 	remove_all(V, Cell1, Cell2),
 	set_square(R/C, Before, Cell2, Grid),
 	remove_from_group_positions(G, Others, V, Grid, After).
+
+% After reducing options in a row, column or group, find any other resolved cells.
+
+find_row_extras(R, RowBefore, RowAfter, V, Extras) :-
+	coordinates(Coords),
+	findall(R/C/V2, (
+		member(C, Coords),
+		get_indexed_item(C, RowAfter, [V2]),
+		integer(V2),
+		V \== V2,
+		not(member([V2], RowBefore))
+	), Extras).
+
+scan_for_column_extras(GridBefore, GridAfter, C, V, Extras) :-
+	coordinates(Coords),
+	findall(R/C/V2, (
+		member(R, Coords),
+		get_square(R/C, GridAfter, [V2]),
+		integer(V2),
+		V \== V2,
+		not(get_square(R/C, GridBefore, [V2]))
+	), Extras).
+
+scan_for_group_extras(GridBefore, GridAfter, G, V, Extras) :-
+	coordinates(Coords),
+	findall(R/C/V2, (
+		member(Pos, Coords),
+		convert_position(R/C, G/Pos),
+		get_square(R/C, GridAfter, [V2]),
+		integer(V2),
+		V \== V2,
+		not(get_square(R/C, GridBefore, [V2]))
+	), Extras).
+
+
+% Find any further reductions possible in a single row, based on positions for
+% each universe value.
+
+find_reductions_in_row(R, Row, Reductions) :-
+	unresolved_values_in_row(Row, Values),
+	setof(R/C/V1, (
+		member(V1, Values),
+		indexed_value_options(V1, Row, [C])
+	), Reductions).
+
+
+% Which of the possible cell values are still not resolved in the given row?
+
+unresolved_values_in_row(Row, Values) :-
+	universe(Universe),
+	setof(V, (
+		member(V, Universe),
+		not(member([V], Row))
+	), Values).
+
+
+% What are the indices of the cells in the row which contain the given value?
+
+indexed_value_options(Value, Row, Indices) :-
+	indexed_value_options_impl(Value, Row, 1, Indices).
+
+indexed_value_options_impl(_, [], _, []).
+indexed_value_options_impl(Value, [Head | Tail], Index, [Index | TailIndices]) :-
+	member(Value, Head),
+	!,
+	NewIndex is Index + 1,
+	indexed_value_options_impl(Value, Tail, NewIndex, TailIndices).
+indexed_value_options_impl(Value, [_ | Tail], Index, TailIndices) :-
+	NewIndex is Index + 1,
+	indexed_value_options_impl(Value, Tail, NewIndex, TailIndices).
+
 
 % List concatenation.
 conc([], L, L).
@@ -196,7 +270,6 @@ strcat_codes([H | T], L) :-
 	string_codes(H, HL),
 	strcat_codes(T, TL),
 	conc(HL, TL, L).
-
 
 
 to_console([]).
@@ -264,7 +337,7 @@ clear :-
 
 move(R/C/V) :-
 	position(Grid),
-	resolve_square(R/C, Grid, V, After),
+	resolve_square(R/C, Grid, V, After, _),
 	!,
 	retractall(position(_)),
 	assert(position(After)),
@@ -282,15 +355,21 @@ moves([R/C/V | Tail]) :-
 
 % *** EVERYTHING BELOW HERE NEEDS TESTING....   ***
 
-% 1. Define structure for layout, moves, grid.
-% 2. Capture initial state of the puzzle grid as a layout.
-% 3. Convert layout to a set of moves, then use each move to reduce the unconstrained grid and propagate the solution to the puzzle.
-% 4. Display the state of the puzzle as a grid of options, or as a layout of fully resolved values per square.
-
-% 5. Capture image of the initial layout from camera; detect grid lines and use to locate and rescale characters; OCR technology to classify each of the detected characters and populate an initial layout for puzzle; solve and produce an image overlay showing the solution.
-
-
-
+% 1. DONE: Define structure for layout, moves, grid.
+% 2. DONE: Capture initial state of the puzzle grid as a layout.
+% 3. DONE: Convert layout to a set of moves, then use each move to reduce the 
+% unconstrained grid and propagate the solution to the puzzle.
+%
+% 4. Display the state of the puzzle as a grid of options, or as a layout of fully
+% resolved values per square.
+%
+% 5. Capture image of the initial layout from camera; detect grid lines and use to
+% locate and rescale characters; OCR technology to classify each of the detected
+% characters and populate an initial layout for puzzle; solve and produce an image
+% overlay showing the solution.
+%
+% 6. DONE: Need to propagate extra resolutions through row and col and group
+% eliminations, avoiding capture of previous resolutions in the extras list.
 
 
 setup_sudoku(Layout, Grid) :-
@@ -314,8 +393,9 @@ layout_moves(Layout, AllMoves) :-
 
 reduce_by_moves(Grid, [], Grid).
 reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
-	resolve_square(R/C, GridBefore, V, Grid2),
-	reduce_by_moves(Grid2, Tail, GridAfter).
+	resolve_square(R/C, GridBefore, V, Grid2, Extras),
+	reduce_by_moves(Grid2, Extras, Grid3),
+	reduce_by_moves(Grid3, Tail, GridAfter).
 
 
 empty_layout([
@@ -388,3 +468,8 @@ setup_layout_from_moves(Before, [R/C/V | OtherMoves], After) :-
 	set_square(R/C, Before, V, Layout),
 	setup_layout_from_moves(Layout, OtherMoves, After).
 
+
+% Display layout.
+
+display_layout(Layout) :-
+	to_console(Layout).
