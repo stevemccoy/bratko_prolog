@@ -216,12 +216,27 @@ scan_for_group_extras(GridBefore, GridAfter, G, V, Extras) :-
 	), Extras).
 
 
+% Find any reductions in any row of the grid, based on available positions for
+% each universe value.
+
+find_reductions_in_any_row(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(R, Coords),
+		get_indexed_item(R, Grid, Row),
+		find_reductions_in_row(R, Row, RowReductions),
+		member(R/C/V, RowReductions)
+	), Reductions).
+
+
 % Find any further reductions possible in a single row, based on positions for
 % each universe value.
 
 find_reductions_in_row(R, Row, Reductions) :-
 	unresolved_values_in_row(Row, Values),
-	setof(R/C/V1, (
+	!,
+	findall(R/C/V1, (
 		member(V1, Values),
 		indexed_value_options(V1, Row, [C])
 	), Reductions).
@@ -231,6 +246,7 @@ find_reductions_in_row(R, Row, Reductions) :-
 
 unresolved_values_in_row(Row, Values) :-
 	universe(Universe),
+	!,
 	setof(V, (
 		member(V, Universe),
 		not(member([V], Row))
@@ -240,17 +256,13 @@ unresolved_values_in_row(Row, Values) :-
 % What are the indices of the cells in the row which contain the given value?
 
 indexed_value_options(Value, Row, Indices) :-
-	indexed_value_options_impl(Value, Row, 1, Indices).
-
-indexed_value_options_impl(_, [], _, []).
-indexed_value_options_impl(Value, [Head | Tail], Index, [Index | TailIndices]) :-
-	member(Value, Head),
+	coordinates(Coords),
 	!,
-	NewIndex is Index + 1,
-	indexed_value_options_impl(Value, Tail, NewIndex, TailIndices).
-indexed_value_options_impl(Value, [_ | Tail], Index, TailIndices) :-
-	NewIndex is Index + 1,
-	indexed_value_options_impl(Value, Tail, NewIndex, TailIndices).
+	findall(Index, (
+		member(Index, Coords),
+		get_indexed_item(Index, Row, Values),
+		member(Value, Values)
+	), Indices).
 
 
 % List concatenation.
@@ -394,6 +406,7 @@ layout_moves(Layout, AllMoves) :-
 reduce_by_moves(Grid, [], Grid).
 reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
 	resolve_square(R/C, GridBefore, V, Grid2, Extras),
+	!,
 	reduce_by_moves(Grid2, Extras, Grid3),
 	reduce_by_moves(Grid3, Tail, GridAfter).
 
@@ -473,3 +486,23 @@ setup_layout_from_moves(Before, [R/C/V | OtherMoves], After) :-
 
 display_layout(Layout) :-
 	to_console(Layout).
+
+
+% Solve a Sudoku puzzle from an empty grid by provided set of square fillings.
+
+solve(Moves, FinalGrid) :-
+	make_grid(Grid0),
+	reduce_by_moves(Grid0, Moves, Grid1),
+	further_reductions(Grid1, FinalGrid).
+
+
+% Iterate the reductions of a grid using various tactics.
+
+futher_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_row(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+further_reductions(Grid, Grid).
