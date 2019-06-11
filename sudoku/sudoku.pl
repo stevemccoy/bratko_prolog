@@ -225,45 +225,87 @@ find_reductions_in_any_row(Grid, Reductions) :-
 	findall(R/C/V, (
 		member(R, Coords),
 		get_indexed_item(R, Grid, Row),
-		find_reductions_in_row(R, Row, RowReductions),
-		member(R/C/V, RowReductions)
+		find_reductions_in_vector(Row, RowReductions),
+		member(C/V, RowReductions)
 	), Reductions).
 
+% Find any reductions in any column of the grid, based on available positions for each universe value.
 
-% Find any further reductions possible in a single row, based on positions for
+find_reductions_in_any_column(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(C, Coords),
+		extract_selected_column(Grid, C, Column),
+		find_reductions_in_vector(Column, ColReductions),
+		member(R/V, ColReductions)
+	), Reductions).
+
+% Find any reductions in any group of the grid, based on available positions for each universe value.
+
+find_reductions_in_any_group(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(G, Coords),
+		extract_selected_group(Grid, G, Group),
+		find_reductions_in_vector(Group, GroupReductions),
+		member(ItemIndex/V, GroupReductions),
+		convert_position(R/C, G/ItemIndex)
+	), Reductions).
+
+% Find any further reductions possible in a single row/column/group, based on positions for
 % each universe value.
 
-find_reductions_in_row(R, Row, Reductions) :-
-	unresolved_values_in_row(Row, Values),
+find_reductions_in_vector(Vector, Reductions) :-
+	unresolved_values_in_vector(Vector, Values),
 	!,
-	findall(R/C/V1, (
-		member(V1, Values),
-		indexed_value_options(V1, Row, [C])
+	findall(Index/Value, (
+		member(Value, Values),
+		indexed_value_options(Value, Vector, [Index])
 	), Reductions).
 
+% Which of the possible cell values are still not resolved in the given vector?
 
-% Which of the possible cell values are still not resolved in the given row?
-
-unresolved_values_in_row(Row, Values) :-
+unresolved_values_in_vector(Vector, Values) :-
 	universe(Universe),
 	!,
 	setof(V, (
 		member(V, Universe),
-		not(member([V], Row))
+		not(member([V], Vector))
 	), Values).
 
+% What are the indices of the cells in the row/column/group which contain the given value?
 
-% What are the indices of the cells in the row which contain the given value?
-
-indexed_value_options(Value, Row, Indices) :-
+indexed_value_options(Value, Vector, Indices) :-
 	coordinates(Coords),
 	!,
 	findall(Index, (
 		member(Index, Coords),
-		get_indexed_item(Index, Row, Values),
+		get_indexed_item(Index, Vector, Values),
 		member(Value, Values)
 	), Indices).
 
+% Pull out items from the given column, ordered by row index.
+
+extract_selected_column(Grid, ColIndex, Column) :-
+	coordinates(Coords),
+	!,
+	findall(Values, (
+		member(RowIndex, Coords),
+		get_square(RowIndex/ColIndex, Grid, Values)
+	), Column).
+
+% Pull out items from given group into a vector ordered by item index.
+
+extract_selected_group(Grid, GroupIndex, Group) :-
+	coordinates(Coords),
+	!,
+	findall(Values, (
+		member(ItemIndex, Coords),
+		convert_position(R/C, GroupIndex/ItemIndex),
+		get_square(R/C, Grid, Values)
+	), Group).
 
 % List concatenation.
 conc([], L, L).
@@ -307,26 +349,33 @@ display_grid(Grid) :-
 	to_console(StringList).
 
 
-display_grid(Grid, StringList) :-
+display_grid(Grid, [RowSep | StringList]) :-
+	row_separator(RowSep),
+	!,
 	findall(RS, (
 		member(Row, Grid), 
 		display_row(Row, RSL), 
 		member(RS, RSL)
 	), StringList).
 
+
+row_separator("----------------------------------------------").
+
 % Display row.
 
-display_row(Row, [RS1, RS2, RS3, ""]) :-
+display_row(Row, [RS1, RS2, RS3, RowSep]) :-
 	display_row_slice(Row, [1,2,3], RS1),
 	display_row_slice(Row, [4,5,6], RS2),
-	display_row_slice(Row, [7,8,9], RS3).
+	display_row_slice(Row, [7,8,9], RS3),
+	row_separator(RowSep).
 
 
 display_row_slice([], _, "").
 display_row_slice(Row, Slice, String) :-
-	findall(CS, (member(Cell, Row), display_cell_slice(Cell, Slice, CS)), SL),
+	findall(CS, (member(Cell, Row), display_cell_slice(Cell, Slice, CS)), SL1),
 	!,
-	strcat(SL, String).
+	conc(SL1, ["|"], SL2),
+	strcat(SL2, String).
 
 % Display cell slice.
 
@@ -338,7 +387,7 @@ display_cell_slice(Cell, Slice, String) :-
 	M is NS - N,
 	repeat_term(M, " ", Padding),
 	conc(Padding, L, L2),
-	strcat([" " | L2], String).
+	strcat(["| " | L2], String).
 
 position(_).
 
@@ -500,6 +549,20 @@ solve(Moves, FinalGrid) :-
 
 futher_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_row(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+futher_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_column(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+futher_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_group(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
 	reduce_by_moves(Grid1, Reductions, Grid2),
