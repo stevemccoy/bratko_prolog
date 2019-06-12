@@ -84,6 +84,24 @@ show_positions2() :-
 	writeln(Position).
 
 
+% List concatenation.
+conc([], L, L).
+conc([H | Tail], L1, [H | L2]) :-
+	conc(Tail, L1, L2).
+
+% String concatenation.
+
+strcat([], "").
+strcat(StringList, S) :-
+	strcat_codes(StringList, CodeList),
+	string_codes(S, CodeList).
+
+strcat_codes([], []).
+strcat_codes([H | T], L) :-
+	string_codes(H, HL),
+	strcat_codes(T, TL),
+	conc(HL, TL, L).
+
 % Get and set indexed positions in a list.
 
 get_indexed_item(1, [V | _], V).
@@ -107,6 +125,20 @@ remove_all(V, [V | Tail], TailAfter) :-
 remove_all(V, [H | Tail], [H | TailAfter]) :-
 	remove_all(V, Tail, TailAfter).
 
+
+% Flatten terms in list.
+
+flatten([], []).
+flatten([[] | T], Result) :-
+	!,
+	flatten(T, Result).
+flatten([[H | T] | Rest], Result) :-
+	!,
+	flatten([H | T], HFlat),
+	flatten(Rest, RestFlat),
+	conc(HFlat, RestFlat, Result).
+flatten([H | T], [H | TFlat]) :-
+	flatten(T, TFlat).
 
 % Get and set the value of a given square.
 
@@ -306,24 +338,6 @@ extract_selected_group(Grid, GroupIndex, Group) :-
 		convert_position(R/C, GroupIndex/ItemIndex),
 		get_square(R/C, Grid, Values)
 	), Group).
-
-% List concatenation.
-conc([], L, L).
-conc([H | Tail], L1, [H | L2]) :-
-	conc(Tail, L1, L2).
-
-% String concatenation.
-
-strcat([], "").
-strcat(StringList, S) :-
-	strcat_codes(StringList, CodeList),
-	string_codes(S, CodeList).
-
-strcat_codes([], []).
-strcat_codes([H | T], L) :-
-	string_codes(H, HL),
-	strcat_codes(T, TL),
-	conc(HL, TL, L).
 
 
 to_console([]).
@@ -547,21 +561,43 @@ solve(Moves, FinalGrid) :-
 
 % Iterate the reductions of a grid using various tactics.
 
-futher_reductions(Grid1, FinalGrid) :-
+find_all_reductions(Grid1, AllReductions) :-
+	find_reductions_in_any_row(Grid1, RowReds),
+	find_reductions_in_any_column(Grid1, ColReds),
+	find_reductions_in_any_group(Grid1, GrpReds),
+	flatten([RowReds, ColReds, GrpReds], Reductions),
+	setof(R, (member(R, Reductions)), AllReductions).
+
+
+
+complete_solve(Grid1, FinalGrid) :-
+	find_all_reductions(Grid1, Reductions),
+	member(_, Reductions),
+	!,
+	writeln(Reductions),
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	display_grid(Grid2),
+	complete_solve(Grid2, FinalGrid).
+
+complete_solve(Grid, Grid).
+
+
+
+further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_row(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
 	reduce_by_moves(Grid1, Reductions, Grid2),
 	further_reductions(Grid2, FinalGrid).
 
-futher_reductions(Grid1, FinalGrid) :-
+further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_column(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
 	reduce_by_moves(Grid1, Reductions, Grid2),
 	further_reductions(Grid2, FinalGrid).
 
-futher_reductions(Grid1, FinalGrid) :-
+further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_group(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
