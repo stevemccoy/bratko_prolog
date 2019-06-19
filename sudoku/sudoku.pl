@@ -140,6 +140,13 @@ flatten([[H | T] | Rest], Result) :-
 flatten([H | T], [H | TFlat]) :-
 	flatten(T, TFlat).
 
+% difference(Super, Sub, Diff) - Diff is the set of elements of Super which are not in Sub.
+difference(S, [], S).
+difference(Set, [H | T], Diff) :-
+	remove_all(H, Set, D1),
+	difference(D1, T, Diff).
+
+
 % Get and set the value of a given square.
 
 get_square(R/C, Grid, Value) :-
@@ -470,9 +477,9 @@ reduce_by_moves(Grid, [], Grid).
 reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
 	resolve_square(R/C, GridBefore, V, Grid2, Extras),
 	!,
-	reduce_by_moves(Grid2, Extras, Grid3),
+	difference(Extras, Tail, TrueExtras),
+	reduce_by_moves(Grid2, TrueExtras, Grid3),
 	reduce_by_moves(Grid3, Tail, GridAfter).
-
 
 empty_layout([
 	[_,_,_, _,_,_, _,_,_],
@@ -562,13 +569,41 @@ solve(Moves, FinalGrid) :-
 % Iterate the reductions of a grid using various tactics.
 
 find_all_reductions(Grid1, AllReductions) :-
+	!,
 	find_reductions_in_any_row(Grid1, RowReds),
 	find_reductions_in_any_column(Grid1, ColReds),
 	find_reductions_in_any_group(Grid1, GrpReds),
 	flatten([RowReds, ColReds, GrpReds], Reductions),
-	setof(R, (member(R, Reductions)), AllReductions).
+	(	member(_, Reductions),
+		setof(R, (member(R, Reductions)), AllReductions)
+		;
+		AllReductions = [] 
+	).
+
+rcs(Grid, [], Grid).
+rcs(Grid1, Moves1, FinalGrid) :-
+	cs(Grid1, Moves1, Grid2, Moves2),
+	!,
+	rcs(Grid2, Moves2, FinalGrid).
+
+/*
+
+We appear to have a problem with the rcs procedure here in that the extras 
+produced when resolving the puzzle using some moves actually seem to produce
+impossible value reductions. 
+
+*/
 
 
+
+
+
+% Non-recursive solve helper.
+
+cs(Grid, [], Grid, []).
+cs(InGrid, InMoves, OutGrid, OutMoves) :-
+	reduce_by_moves(InGrid, InMoves, OutGrid),
+	find_all_reductions(OutGrid, OutMoves).
 
 complete_solve(Grid1, FinalGrid) :-
 	find_all_reductions(Grid1, Reductions),
@@ -580,7 +615,6 @@ complete_solve(Grid1, FinalGrid) :-
 	complete_solve(Grid2, FinalGrid).
 
 complete_solve(Grid, Grid).
-
 
 
 further_reductions(Grid1, FinalGrid) :-
