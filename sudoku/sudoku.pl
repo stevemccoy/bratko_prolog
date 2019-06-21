@@ -159,33 +159,30 @@ set_square(R/C, Before, V, After) :-
 	set_indexed_item(R, Before, NewRow, After).
 
 
-% Propagate number setting from one square.
-
-
 % Resolve given square to a single value.
 
-resolve_square(R/C, Before, V, After, AllExtras) :-
+resolve_square(R/C, Before, V, After) :-
 	% Make sure V is still an option for this square.
 	get_square(R/C, Before, Cell),
 	member(V, Cell),
 	!,
-	remove_from_row(R, Before, V, A1, RowExtras),
+	remove_from_row(R, Before, V, A1),
 	remove_from_column(C, A1, V, A2),
-	scan_for_column_extras(A1, A2, C, V, ColExtras),
 	convert_position(R/C, G/_),
 	remove_from_group(G, A2, V, A3),
-	scan_for_group_extras(A2, A3, G, V, GroupExtras),
-	conc(RowExtras, ColExtras, X1),
-	conc(X1, GroupExtras, AllExtras),
+
+	% Determine if there are any "accidental square resolutions" by comparing grids.
+	find_resolutions_in_grid(Before, A3, Resolutions),
+
 	% Having removed V from everywhere else, add it back where needed.
-	set_square(R/C, A3, [V], After).
+	set_square(R/C, A3, [V], After)
 
-% propagate_in_row(R/C, Before, Value, After)
+	apply_accidental_resolutions(Resolutions, After, ReallyAfter).
 
-remove_from_row(R, GridBefore, V, GridAfter, Extras) :-
+
+remove_from_row(R, GridBefore, V, GridAfter) :-
 	get_indexed_item(R, GridBefore, RowBefore),
 	remove_from_row(RowBefore, V, RowAfter),
-	find_row_extras(R, RowBefore, RowAfter, V, Extras),
 	set_indexed_item(R, GridBefore, RowAfter, GridAfter).
 
 remove_from_row([], _, []).
@@ -193,8 +190,6 @@ remove_from_row([Cell1 | Tail1], Value, [Cell2 | Tail2]) :-
 	remove_all(Value, Cell1, Cell2),
 	remove_from_row(Tail1, Value, Tail2).
 
-
-% remove_from_column(C, GridBefore, Value, GridAfter)
 
 remove_from_column(_, [], _, []).
 remove_from_column(C, [RowBefore | TailBefore], Value, [RowAfter | TailAfter]) :-
@@ -206,8 +201,6 @@ remove_from_row_col(RowBefore, ColIndex, Value, RowAfter) :-
 	remove_all(Value, Cell1, Cell2),
 	set_indexed_item(ColIndex, RowBefore, Cell2, RowAfter).
 
-
-% remove_from_group(G, GridBefore, Value, GridAfter)
 
 remove_from_group(G, GridBefore, V, GridAfter) :-
 	universe(Universe),
@@ -221,7 +214,14 @@ remove_from_group_positions(G, [Pos1 | Others], V, Before, After) :-
 	set_square(R/C, Before, Cell2, Grid),
 	remove_from_group_positions(G, Others, V, Grid, After).
 
+
 % After reducing options in a row, column or group, find any other resolved cells.
+
+/*
+
+find_all_extras(Grid)
+
+
 
 find_row_extras(R, RowBefore, RowAfter, V, Extras) :-
 	coordinates(Coords),
@@ -254,6 +254,7 @@ scan_for_group_extras(GridBefore, GridAfter, G, V, Extras) :-
 		not(get_square(R/C, GridBefore, [V2]))
 	), Extras).
 
+*/
 
 % Find any reductions in any row of the grid, based on available positions for
 % each universe value.
@@ -367,7 +368,8 @@ repeat_term(N, T, [T | Tail]) :-
 display_grid(Grid) :-
 	display_grid(Grid, StringList),
 	nl,
-	to_console(StringList).
+	to_console(StringList),
+	readln(_).
 
 
 display_grid(Grid, [RowSep | StringList]) :-
@@ -419,7 +421,7 @@ clear :-
 
 move(R/C/V) :-
 	position(Grid),
-	resolve_square(R/C, Grid, V, After, _),
+	resolve_square(R/C, Grid, V, After),
 	!,
 	retractall(position(_)),
 	assert(position(After)),
@@ -475,11 +477,9 @@ layout_moves(Layout, AllMoves) :-
 
 reduce_by_moves(Grid, [], Grid).
 reduce_by_moves(GridBefore, [R/C/V | Tail], GridAfter) :-
-	resolve_square(R/C, GridBefore, V, Grid2, Extras),
+	resolve_square(R/C, GridBefore, V, Grid2),
 	!,
-	difference(Extras, Tail, TrueExtras),
-	reduce_by_moves(Grid2, TrueExtras, Grid3),
-	reduce_by_moves(Grid3, Tail, GridAfter).
+	reduce_by_moves(Grid2, Tail, GridAfter).
 
 empty_layout([
 	[_,_,_, _,_,_, _,_,_],
@@ -563,8 +563,37 @@ display_layout(Layout) :-
 solve(Moves, FinalGrid) :-
 	make_grid(Grid0),
 	reduce_by_moves(Grid0, Moves, Grid1),
+	display_grid(Grid1),
 	further_reductions(Grid1, FinalGrid).
 
+further_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_row(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	writeln(Reductions),
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	display_grid(Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+further_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_column(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	writeln(Reductions),
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	display_grid(Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+further_reductions(Grid1, FinalGrid) :-
+	find_reductions_in_any_group(Grid1, Reductions),
+	Reductions = [_ | _],
+	!,
+	writeln(Reductions),
+	reduce_by_moves(Grid1, Reductions, Grid2),
+	display_grid(Grid2),
+	further_reductions(Grid2, FinalGrid).
+
+further_reductions(Grid, Grid).
 
 % Iterate the reductions of a grid using various tactics.
 
@@ -580,12 +609,6 @@ find_all_reductions(Grid1, AllReductions) :-
 		AllReductions = [] 
 	).
 
-rcs(Grid, [], Grid).
-rcs(Grid1, Moves1, FinalGrid) :-
-	cs(Grid1, Moves1, Grid2, Moves2),
-	!,
-	rcs(Grid2, Moves2, FinalGrid).
-
 /*
 
 We appear to have a problem with the rcs procedure here in that the extras 
@@ -594,10 +617,6 @@ impossible value reductions.
 
 */
 
-
-
-
-
 % Non-recursive solve helper.
 
 cs(Grid, [], Grid, []).
@@ -605,37 +624,3 @@ cs(InGrid, InMoves, OutGrid, OutMoves) :-
 	reduce_by_moves(InGrid, InMoves, OutGrid),
 	find_all_reductions(OutGrid, OutMoves).
 
-complete_solve(Grid1, FinalGrid) :-
-	find_all_reductions(Grid1, Reductions),
-	member(_, Reductions),
-	!,
-	writeln(Reductions),
-	reduce_by_moves(Grid1, Reductions, Grid2),
-	display_grid(Grid2),
-	complete_solve(Grid2, FinalGrid).
-
-complete_solve(Grid, Grid).
-
-
-further_reductions(Grid1, FinalGrid) :-
-	find_reductions_in_any_row(Grid1, Reductions),
-	Reductions = [_ | _],
-	!,
-	reduce_by_moves(Grid1, Reductions, Grid2),
-	further_reductions(Grid2, FinalGrid).
-
-further_reductions(Grid1, FinalGrid) :-
-	find_reductions_in_any_column(Grid1, Reductions),
-	Reductions = [_ | _],
-	!,
-	reduce_by_moves(Grid1, Reductions, Grid2),
-	further_reductions(Grid2, FinalGrid).
-
-further_reductions(Grid1, FinalGrid) :-
-	find_reductions_in_any_group(Grid1, Reductions),
-	Reductions = [_ | _],
-	!,
-	reduce_by_moves(Grid1, Reductions, Grid2),
-	further_reductions(Grid2, FinalGrid).
-
-further_reductions(Grid, Grid).
