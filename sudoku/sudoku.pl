@@ -160,8 +160,7 @@ set_square(R/C, Before, V, After) :-
 
 
 % Resolve given square to a single value.
-
-resolve_square(R/C, Before, V, After) :-
+resolve_square(R/C, Before, V, ReallyAfter) :-
 	% Make sure V is still an option for this square.
 	get_square(R/C, Before, Cell),
 	member(V, Cell),
@@ -170,14 +169,15 @@ resolve_square(R/C, Before, V, After) :-
 	remove_from_column(C, A1, V, A2),
 	convert_position(R/C, G/_),
 	remove_from_group(G, A2, V, A3),
-
 	% Determine if there are any "accidental square resolutions" by comparing grids.
 	find_resolutions_in_grid(Before, A3, Resolutions),
-
 	% Having removed V from everywhere else, add it back where needed.
-	set_square(R/C, A3, [V], After)
-
+	set_square(R/C, A3, [V], After),
 	apply_accidental_resolutions(Resolutions, After, ReallyAfter).
+
+% Do nothing version of the above 
+% (needed because of conflicting orders of option reduction in the grid)
+resolve_square(_/_, Grid, _, Grid).
 
 
 remove_from_row(R, GridBefore, V, GridAfter) :-
@@ -215,46 +215,35 @@ remove_from_group_positions(G, [Pos1 | Others], V, Before, After) :-
 	remove_from_group_positions(G, Others, V, Grid, After).
 
 
-% After reducing options in a row, column or group, find any other resolved cells.
+% find_resolutions_in_grid(Before, After, Resolutions)
+%
+% Determine which of the squares in the grid have been resolved (reduced to a single option)
+% between Before and After, typically by removal of other options from the associated row, 
+% column or group.
 
-/*
-
-find_all_extras(Grid)
-
-
-
-find_row_extras(R, RowBefore, RowAfter, V, Extras) :-
+find_resolutions_in_grid(GridBefore, GridAfter, Resolutions) :-
 	coordinates(Coords),
-	findall(R/C/V2, (
-		member(C, Coords),
-		get_indexed_item(C, RowAfter, [V2]),
-		integer(V2),
-		V \== V2,
-		not(member([V2], RowBefore))
-	), Extras).
-
-scan_for_column_extras(GridBefore, GridAfter, C, V, Extras) :-
-	coordinates(Coords),
-	findall(R/C/V2, (
+	!,
+	findall(R/C/V, (
 		member(R, Coords),
-		get_square(R/C, GridAfter, [V2]),
-		integer(V2),
-		V \== V2,
-		not(get_square(R/C, GridBefore, [V2]))
-	), Extras).
+		member(C, Coords),
+		get_square(R/C, GridAfter, [V]),
+		integer(V),
+		get_square(R/C, GridBefore, Cell),
+		Cell \== [V]
+	), Resolutions).
 
-scan_for_group_extras(GridBefore, GridAfter, G, V, Extras) :-
-	coordinates(Coords),
-	findall(R/C/V2, (
-		member(Pos, Coords),
-		convert_position(R/C, G/Pos),
-		get_square(R/C, GridAfter, [V2]),
-		integer(V2),
-		V \== V2,
-		not(get_square(R/C, GridBefore, [V2]))
-	), Extras).
 
-*/
+% apply_accidental_resolutions(Resolutions, Grid, After).
+%
+% Apply the reductions discovered by find_resolutions_in_grid to the grid.
+
+apply_accidental_resolutions([], Grid, Grid).
+apply_accidental_resolutions([R/C/V | OtherResolutions], GridBefore, GridAfter) :-
+	resolve_square(R/C, GridBefore, V, G2),
+	apply_accidental_resolutions(OtherResolutions, G2, GridAfter).
+	
+
 
 % Find any reductions in any row of the grid, based on available positions for
 % each universe value.
@@ -368,8 +357,8 @@ repeat_term(N, T, [T | Tail]) :-
 display_grid(Grid) :-
 	display_grid(Grid, StringList),
 	nl,
-	to_console(StringList),
-	readln(_).
+	to_console(StringList).
+%	readln(_).
 
 
 display_grid(Grid, [RowSep | StringList]) :-
@@ -594,33 +583,4 @@ further_reductions(Grid1, FinalGrid) :-
 	further_reductions(Grid2, FinalGrid).
 
 further_reductions(Grid, Grid).
-
-% Iterate the reductions of a grid using various tactics.
-
-find_all_reductions(Grid1, AllReductions) :-
-	!,
-	find_reductions_in_any_row(Grid1, RowReds),
-	find_reductions_in_any_column(Grid1, ColReds),
-	find_reductions_in_any_group(Grid1, GrpReds),
-	flatten([RowReds, ColReds, GrpReds], Reductions),
-	(	member(_, Reductions),
-		setof(R, (member(R, Reductions)), AllReductions)
-		;
-		AllReductions = [] 
-	).
-
-/*
-
-We appear to have a problem with the rcs procedure here in that the extras 
-produced when resolving the puzzle using some moves actually seem to produce
-impossible value reductions. 
-
-*/
-
-% Non-recursive solve helper.
-
-cs(Grid, [], Grid, []).
-cs(InGrid, InMoves, OutGrid, OutMoves) :-
-	reduce_by_moves(InGrid, InMoves, OutGrid),
-	find_all_reductions(OutGrid, OutMoves).
 
