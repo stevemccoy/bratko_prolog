@@ -84,6 +84,8 @@ show_positions2() :-
 	writeln(Position).
 
 
+% List and other utility functions.
+
 % List concatenation.
 conc([], L, L).
 conc([H | Tail], L1, [H | L2]) :-
@@ -125,7 +127,6 @@ remove_all(V, [V | Tail], TailAfter) :-
 remove_all(V, [H | Tail], [H | TailAfter]) :-
 	remove_all(V, Tail, TailAfter).
 
-
 % Flatten terms in list.
 
 flatten([], []).
@@ -140,11 +141,19 @@ flatten([[H | T] | Rest], Result) :-
 flatten([H | T], [H | TFlat]) :-
 	flatten(T, TFlat).
 
-% difference(Super, Sub, Diff) - Diff is the set of elements of Super which are not in Sub.
+% difference(Super, Sub, Diff)
+% - Diff is the set of elements of Super which are not in Sub.
 difference(S, [], S).
 difference(Set, [H | T], Diff) :-
 	remove_all(H, Set, D1),
 	difference(D1, T, Diff).
+
+% repeat_term(N, Term, List) :-
+repeat_term(0, _, []).
+repeat_term(N, T, [T | Tail]) :-
+	N > 0,
+	M is N - 1,
+	repeat_term(M, T, Tail).
 
 
 % Get and set the value of a given square.
@@ -244,122 +253,11 @@ apply_accidental_resolutions([R/C/V | OtherResolutions], GridBefore, GridAfter) 
 	apply_accidental_resolutions(OtherResolutions, G2, GridAfter).
 	
 
-
-% Find any reductions in any row of the grid, based on available positions for
-% each universe value.
-
-find_reductions_in_any_row(Grid, Reductions) :-
-	coordinates(Coords),
-	!,
-	findall(R/C/V, (
-		member(R, Coords),
-		get_indexed_item(R, Grid, Row),
-		find_reductions_in_vector(Row, RowReductions),
-		member(C/V, RowReductions)
-	), Reductions).
-
-% Find any reductions in any column of the grid, based on available positions for each universe value.
-
-find_reductions_in_any_column(Grid, Reductions) :-
-	coordinates(Coords),
-	!,
-	findall(R/C/V, (
-		member(C, Coords),
-		extract_selected_column(Grid, C, Column),
-		find_reductions_in_vector(Column, ColReductions),
-		member(R/V, ColReductions)
-	), Reductions).
-
-% Find any reductions in any group of the grid, based on available positions for each universe value.
-
-find_reductions_in_any_group(Grid, Reductions) :-
-	coordinates(Coords),
-	!,
-	findall(R/C/V, (
-		member(G, Coords),
-		extract_selected_group(Grid, G, Group),
-		find_reductions_in_vector(Group, GroupReductions),
-		member(ItemIndex/V, GroupReductions),
-		convert_position(R/C, G/ItemIndex)
-	), Reductions).
-
-% Find any further reductions possible in a single row/column/group, based on positions for
-% each universe value.
-
-find_reductions_in_vector(Vector, Reductions) :-
-	unresolved_values_in_vector(Vector, Values),
-	!,
-	findall(Index/Value, (
-		member(Value, Values),
-		indexed_value_options(Value, Vector, [Index])
-	), Reductions).
-
-% Which of the possible cell values are still not resolved in the given vector?
-
-unresolved_values_in_vector(Vector, Values) :-
-	universe(Universe),
-	!,
-	setof(V, (
-		member(V, Universe),
-		not(member([V], Vector))
-	), Values).
-
-% What are the indices of the cells in the row/column/group which contain the given value?
-
-indexed_value_options(Value, Vector, Indices) :-
-	coordinates(Coords),
-	!,
-	findall(Index, (
-		member(Index, Coords),
-		get_indexed_item(Index, Vector, Values),
-		member(Value, Values)
-	), Indices).
-
-% Pull out items from the given column, ordered by row index.
-
-extract_selected_column(Grid, ColIndex, Column) :-
-	coordinates(Coords),
-	!,
-	findall(Values, (
-		member(RowIndex, Coords),
-		get_square(RowIndex/ColIndex, Grid, Values)
-	), Column).
-
-% Pull out items from given group into a vector ordered by item index.
-
-extract_selected_group(Grid, GroupIndex, Group) :-
-	coordinates(Coords),
-	!,
-	findall(Values, (
-		member(ItemIndex, Coords),
-		convert_position(R/C, GroupIndex/ItemIndex),
-		get_square(R/C, Grid, Values)
-	), Group).
-
-
-to_console([]).
-to_console([S | Tail]) :-
-	write(S), nl,
-	to_console(Tail).
-
-
-% repeat_term(N, Term, List) :-
-
-repeat_term(0, _, []).
-repeat_term(N, T, [T | Tail]) :-
-	N > 0,
-	M is N - 1,
-	repeat_term(M, T, Tail).
-
-
 % Display grid options.
-
 display_grid(Grid) :-
 	display_grid(Grid, StringList),
 	nl,
 	to_console(StringList).
-%	readln(_).
-
 
 display_grid(Grid, [RowSep | StringList]) :-
 	row_separator(RowSep),
@@ -371,9 +269,13 @@ display_grid(Grid, [RowSep | StringList]) :-
 	), StringList).
 
 
-row_separator("----------------------------------------------").
+to_console([]).
+to_console([S | Tail]) :-
+	write(S), nl,
+	to_console(Tail).
 
-% Display row.
+
+row_separator("----------------------------------------------").
 
 display_row(Row, [RS1, RS2, RS3, RowSep]) :-
 	display_row_slice(Row, [1,2,3], RS1),
@@ -381,15 +283,12 @@ display_row(Row, [RS1, RS2, RS3, RowSep]) :-
 	display_row_slice(Row, [7,8,9], RS3),
 	row_separator(RowSep).
 
-
 display_row_slice([], _, "").
 display_row_slice(Row, Slice, String) :-
 	findall(CS, (member(Cell, Row), display_cell_slice(Cell, Slice, CS)), SL1),
 	!,
 	conc(SL1, ["|"], SL2),
 	strcat(SL2, String).
-
-% Display cell slice.
 
 display_cell_slice(Cell, Slice, String) :-
 	findall(E, (member(E, Slice), member(E, Cell)), L),
@@ -400,6 +299,7 @@ display_cell_slice(Cell, Slice, String) :-
 	repeat_term(M, " ", Padding),
 	conc(Padding, L, L2),
 	strcat(["| " | L2], String).
+
 
 position(_).
 
@@ -423,17 +323,12 @@ moves([R/C/V | Tail]) :-
 	moves(Tail).
 
 
-% Prime a puzzle from initial layout.
-% setup_sudoku(Layout, Grid)
-
-% *** EVERYTHING BELOW HERE NEEDS TESTING....   ***
-
 % 1. DONE: Define structure for layout, moves, grid.
 % 2. DONE: Capture initial state of the puzzle grid as a layout.
 % 3. DONE: Convert layout to a set of moves, then use each move to reduce the 
 % unconstrained grid and propagate the solution to the puzzle.
 %
-% 4. Display the state of the puzzle as a grid of options, or as a layout of fully
+% 4. DONE: Display the state of the puzzle as a grid of options, or as a layout of fully
 % resolved values per square.
 %
 % 5. Capture image of the initial layout from camera; detect grid lines and use to
@@ -521,7 +416,6 @@ display_moves([R/C/V | Moves]) :-
 
 
 % Convert from grid back to layout of fully resolved cells.
-
 layout_from_grid(Grid, After) :-
 	empty_layout(Before),
 	findall(RowIndex/ColumnIndex/Value, (
@@ -541,19 +435,20 @@ setup_layout_from_moves(Before, [R/C/V | OtherMoves], After) :-
 	setup_layout_from_moves(Layout, OtherMoves, After).
 
 
-% Display layout.
-
 display_layout(Layout) :-
 	to_console(Layout).
 
 
 % Solve a Sudoku puzzle from an empty grid by provided set of square fillings.
-
 solve(Moves, FinalGrid) :-
 	make_grid(Grid0),
 	reduce_by_moves(Grid0, Moves, Grid1),
 	display_grid(Grid1),
 	further_reductions(Grid1, FinalGrid).
+
+
+% From a given grid position, determine and apply any resolutions of squares 
+% in the puzzle, by considerations across the rows, columns and groups on the grid.
 
 further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_row(Grid1, Reductions),
@@ -584,3 +479,88 @@ further_reductions(Grid1, FinalGrid) :-
 
 further_reductions(Grid, Grid).
 
+
+% Find any reductions in any row of the grid, based on available positions for
+% each universe value.
+find_reductions_in_any_row(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(R, Coords),
+		get_indexed_item(R, Grid, Row),
+		find_reductions_in_vector(Row, RowReductions),
+		member(C/V, RowReductions)
+	), Reductions).
+
+% Find any reductions in any column of the grid, based on available positions for 
+% each universe value.
+find_reductions_in_any_column(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(C, Coords),
+		extract_selected_column(Grid, C, Column),
+		find_reductions_in_vector(Column, ColReductions),
+		member(R/V, ColReductions)
+	), Reductions).
+
+% Find any reductions in any group of the grid, based on available positions for
+% each universe value.
+find_reductions_in_any_group(Grid, Reductions) :-
+	coordinates(Coords),
+	!,
+	findall(R/C/V, (
+		member(G, Coords),
+		extract_selected_group(Grid, G, Group),
+		find_reductions_in_vector(Group, GroupReductions),
+		member(ItemIndex/V, GroupReductions),
+		convert_position(R/C, G/ItemIndex)
+	), Reductions).
+
+% Find any further reductions possible in a single row/column/group, based on positions for
+% each universe value.
+find_reductions_in_vector(Vector, Reductions) :-
+	unresolved_values_in_vector(Vector, Values),
+	!,
+	findall(Index/Value, (
+		member(Value, Values),
+		indexed_value_options(Value, Vector, [Index])
+	), Reductions).
+
+% Which of the possible cell values are still not resolved in the given vector?
+unresolved_values_in_vector(Vector, Values) :-
+	universe(Universe),
+	!,
+	setof(V, (
+		member(V, Universe),
+		not(member([V], Vector))
+	), Values).
+
+% What are the indices of the cells in the row/column/group which contain the given value?
+indexed_value_options(Value, Vector, Indices) :-
+	coordinates(Coords),
+	!,
+	findall(Index, (
+		member(Index, Coords),
+		get_indexed_item(Index, Vector, Values),
+		member(Value, Values)
+	), Indices).
+
+% Pull out items from the given column, ordered by row index.
+extract_selected_column(Grid, ColIndex, Column) :-
+	coordinates(Coords),
+	!,
+	findall(Values, (
+		member(RowIndex, Coords),
+		get_square(RowIndex/ColIndex, Grid, Values)
+	), Column).
+
+% Pull out items from given group into a vector ordered by item index.
+extract_selected_group(Grid, GroupIndex, Group) :-
+	coordinates(Coords),
+	!,
+	findall(Values, (
+		member(ItemIndex, Coords),
+		convert_position(R/C, GroupIndex/ItemIndex),
+		get_square(R/C, Grid, Values)
+	), Group).
