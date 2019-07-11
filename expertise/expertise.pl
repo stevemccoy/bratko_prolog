@@ -31,6 +31,6 @@ find_skill(Name, 0, [], Match, []) :-
 	matching_skill_under(_, Name, Match).
 
 find_skills(Name, Horizon, Up, Match, Down) :-
-	Horizon > 0,
+	Horizon > 0.
 	
 
