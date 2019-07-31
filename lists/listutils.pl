@@ -297,4 +297,3 @@ merge(AL, [B | BT], [B | LT]) :-
 	merge(AL, BT, LT),
 	!.
 
-

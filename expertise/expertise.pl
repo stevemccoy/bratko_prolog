@@ -35,8 +35,34 @@ matching_skill_under(Parent, Name, MatchList) :-
 	), MatchList).
 
 
-% find_skill(SkillName, Horizon, UpList, MatchList, DownList)
+matching_child_skill(Parent, Child) :-
+	skill(Parent, Skill),
+	matching_name(Skill, Child).
 
+
+matching_skill_as_child(Name, Parent, Child) :-
+	skill(Parent, Child),
+	matching_name(Name, Child).
+
+matching_skill_as_parent(Name, Parent, Child) :-
+	skill(Parent, Child),
+	matching_name(Name, Parent).
+
+
+horizon_match(Name, 0, Parent, Child) :-
+	matching_skill_as_child(Name, Parent, Child).
+
+horizon_match(Name, Horizon, Ancestor, Child) :-
+	Horizon > 0,
+	NewHorizon is Horizon - 1,
+	matching_skill_as_child(Name, Parent, Child),
+	horizon_match(Name, NewHorizon, Ancestor, Parent).
+
+
+
+% find_skill(SkillName, Horizon, UpList, MatchList, DownList)
+% 
+% 
 
 
 find_skill(Name, 0, [], Match, []) :-

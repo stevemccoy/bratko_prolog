@@ -564,3 +564,96 @@ extract_selected_group(Grid, GroupIndex, Group) :-
 		convert_position(R/C, GroupIndex/ItemIndex),
 		get_square(R/C, Grid, Values)
 	), Group).
+
+
+% Remove items from list with given property.
+% remove_items_with(Property, InList, OutList).
+
+remove_items_with(_, [], []).
+remove_items_with(Property, [H | InTail], OutTail) :-
+	Term =.. [Property, H],
+	Term,
+	!,
+	remove_items_with(Property, InTail, OutTail).
+remove_items_with(Property, [H | InTail], [H | OutTail]) :-
+	remove_items_with(Property, InTail, OutTail).
+	
+% Map items from one list to another using a given function.
+% map_items_with(Function, InList, OutList)
+
+map_items_with(_, [], []).
+map_items_with(Function, [G | TailIn], [H | TailOut]) :-
+	Term =.. [Function, G, H],
+	Term,
+	!,
+	map_items_with(Function, TailIn, TailOut).
+
+
+% Set up the layout of the puzzle from a shorthand text string notation. 
+% Example:
+%
+%   -9-----23
+%   ---7---8-
+%   --39----7
+%   1-7-6----
+%   -6--4--7-
+%   ----5-6-8
+%   2----19--
+%   -8---4---
+%   31-----5-
+% 
+%  "-9-----23 ---7---8- --39----7 1-7-6---- -6--4--7- ----5-6-8 2----19-- -8---4--- 31-----5-"
+
+% Split the given input list into rows of 9 elements each to form the puzzle layout.
+split_puzzle_rows([], []).
+split_puzzle_rows(Input, [Row | TailOut]) :-
+	conc(Row, TailIn, Input),
+	length(Row, 9),
+	!,
+	split_puzzle_rows(TailIn, TailOut).
+
+is_space_delimiter(Char) :-
+	char_type(Char, space).
+
+translate_digits(In, Out) :-
+	char_type(In, digit(Out)),
+	!.
+translate_digits(_, _).
+
+% Read the puzzle from an input string, producing a layout list in Output.
+% Fails if the input string is not the right length (when white spaces have been removed)
+read_puzzle(InputString, Output) :-
+	atom_chars(InputString, Chars),
+	remove_items_with(is_space_delimiter, Chars, Chars2),
+	map_items_with(translate_digits, Chars2, List1),
+	split_puzzle_rows(List1, Output).
+
+% Convert row entries to characters.
+layout_chars_row([], []).
+layout_chars_row([s | Tail], [TailChars]) :-	% Translate to space.
+	!,
+	layout_chars_row(Tail, TailChars).
+layout_chars_row([H | Tail], [C | TailChars]) :-	% Digit.
+	char_type(C, digit(H)),
+	!,
+	layout_chars_row(Tail, TailChars).
+layout_chars_row([_ | Tail], [- | TailChars]) :-	% Others - Unbound.
+	layout_chars_row(Tail, TailChars).
+
+layout_chars([], []).
+layout_chars([Row | Tail], [RowChars | TailChars]) :-
+	layout_chars_row([s | Row], RowChars),
+	layout_chars(Tail, TailChars).
+
+
+% 
+puzzle_handler(Input, Output) :-
+	read_puzzle(Input, Layout1),
+	layout_moves(Layout1, Moves),
+	solve(Moves, Grid),
+	display_grid(Grid),
+	layout_from_grid(Grid, Layout2),
+	layout_chars(Layout2, [_ | Chars1]),
+	string_chars(Output, Chars1).
+
+
