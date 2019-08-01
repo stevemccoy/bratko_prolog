@@ -1,4 +1,3 @@
-
 % Sudoku Puzzle Solver
 
 % Constraint satisfaction problem (CSP) with the following options in each cell: 
@@ -630,30 +629,30 @@ read_puzzle(InputString, Output) :-
 
 % Convert row entries to characters.
 layout_chars_row([], []).
-layout_chars_row([s | Tail], [TailChars]) :-	% Translate to space.
+layout_chars_row([H | Tail], [" " | TailChars]) :-	% Translate to space.
+	atom(H),
 	!,
 	layout_chars_row(Tail, TailChars).
 layout_chars_row([H | Tail], [C | TailChars]) :-	% Digit.
-	char_type(C, digit(H)),
+	number(H),
+	number_string(H, C),
 	!,
 	layout_chars_row(Tail, TailChars).
-layout_chars_row([_ | Tail], [- | TailChars]) :-	% Others - Unbound.
+layout_chars_row([_ | Tail], ["-" | TailChars]) :-	% Others - Unbound.
 	layout_chars_row(Tail, TailChars).
 
 layout_chars([], []).
-layout_chars([Row | Tail], [RowChars | TailChars]) :-
+layout_chars([Row | Tail], Result) :-
 	layout_chars_row([s | Row], RowChars),
-	layout_chars(Tail, TailChars).
+	layout_chars(Tail, TailChars),
+	conc(RowChars, TailChars, Result).
 
-
-% 
+% Pattern handler for web service puzzle solver.
+% Input and Output are strings representing puzzle state, with some space padding for legibility.
 puzzle_handler(Input, Output) :-
 	read_puzzle(Input, Layout1),
 	layout_moves(Layout1, Moves),
 	solve(Moves, Grid),
-	display_grid(Grid),
 	layout_from_grid(Grid, Layout2),
 	layout_chars(Layout2, [_ | Chars1]),
-	string_chars(Output, Chars1).
-
-
+	strcat(Chars1, Output).
