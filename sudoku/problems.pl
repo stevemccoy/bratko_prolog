@@ -11,6 +11,7 @@ moves_52([
 9/1/3,9/2/1,9/8/5]).
 
 input_string_52("-9-----23 ---7---8- --39----7 1-7-6---- -6--4--7- ----5-6-8 2----19-- -8---4--- 31-----5-").
+input_string_52_alt("u9uuuuu23uuu7uuu8uuu39uuuu71u7u6uuuuu6uu4uu7uuuuu5u6u82uuuu19uuu8uuu4uuu31uuuuu5u").
 
 moves_tvg([
 	2/5/2,

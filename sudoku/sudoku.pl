@@ -603,6 +603,9 @@ map_items_with(Function, [G | TailIn], [H | TailOut]) :-
 % 
 %  "-9-----23 ---7---8- --39----7 1-7-6---- -6--4--7- ----5-6-8 2----19-- -8---4--- 31-----5-"
 
+puzzle_space_char("").
+puzzle_unknown_char("u").
+
 % Split the given input list into rows of 9 elements each to form the puzzle layout.
 split_puzzle_rows([], []).
 split_puzzle_rows(Input, [Row | TailOut]) :-
@@ -612,7 +615,7 @@ split_puzzle_rows(Input, [Row | TailOut]) :-
 	split_puzzle_rows(TailIn, TailOut).
 
 is_space_delimiter(Char) :-
-	char_type(Char, space).
+	puzzle_space_char(Char).
 
 translate_digits(In, Out) :-
 	char_type(In, digit(Out)),
@@ -629,8 +632,9 @@ read_puzzle(InputString, Output) :-
 
 % Convert row entries to characters.
 layout_chars_row([], []).
-layout_chars_row([H | Tail], [" " | TailChars]) :-	% Translate to space.
+layout_chars_row([H | Tail], [Char | TailChars]) :-	% Translate to space.
 	atom(H),
+	puzzle_space_char(Char),
 	!,
 	layout_chars_row(Tail, TailChars).
 layout_chars_row([H | Tail], [C | TailChars]) :-	% Digit.
@@ -638,7 +642,8 @@ layout_chars_row([H | Tail], [C | TailChars]) :-	% Digit.
 	number_string(H, C),
 	!,
 	layout_chars_row(Tail, TailChars).
-layout_chars_row([_ | Tail], ["-" | TailChars]) :-	% Others - Unbound.
+layout_chars_row([_ | Tail], [Char | TailChars]) :-	% Others - Unbound.
+	puzzle_unknown_char(Char),
 	layout_chars_row(Tail, TailChars).
 
 layout_chars([], []).
