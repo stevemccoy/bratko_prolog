@@ -442,7 +442,6 @@ display_layout(Layout) :-
 solve(Moves, FinalGrid) :-
 	make_grid(Grid0),
 	reduce_by_moves(Grid0, Moves, Grid1),
-	display_grid(Grid1),
 	further_reductions(Grid1, FinalGrid).
 
 
@@ -453,27 +452,21 @@ further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_row(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
-	writeln(Reductions),
 	reduce_by_moves(Grid1, Reductions, Grid2),
-	display_grid(Grid2),
 	further_reductions(Grid2, FinalGrid).
 
 further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_column(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
-	writeln(Reductions),
 	reduce_by_moves(Grid1, Reductions, Grid2),
-	display_grid(Grid2),
 	further_reductions(Grid2, FinalGrid).
 
 further_reductions(Grid1, FinalGrid) :-
 	find_reductions_in_any_group(Grid1, Reductions),
 	Reductions = [_ | _],
 	!,
-	writeln(Reductions),
 	reduce_by_moves(Grid1, Reductions, Grid2),
-	display_grid(Grid2),
 	further_reductions(Grid2, FinalGrid).
 
 further_reductions(Grid, Grid).
@@ -603,8 +596,9 @@ map_items_with(Function, [G | TailIn], [H | TailOut]) :-
 % 
 %  "-9-----23 ---7---8- --39----7 1-7-6---- -6--4--7- ----5-6-8 2----19-- -8---4--- 31-----5-"
 
-puzzle_space_char("").
-puzzle_unknown_char("u").
+puzzle_space_char(' ').
+
+puzzle_unknown_char("-").
 
 % Split the given input list into rows of 9 elements each to form the puzzle layout.
 split_puzzle_rows([], []).
@@ -627,6 +621,7 @@ translate_digits(_, _).
 read_puzzle(InputString, Output) :-
 	atom_chars(InputString, Chars),
 	remove_items_with(is_space_delimiter, Chars, Chars2),
+	length(Chars2, 81),
 	map_items_with(translate_digits, Chars2, List1),
 	split_puzzle_rows(List1, Output).
 

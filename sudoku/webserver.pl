@@ -2,6 +2,7 @@
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_parameters)).
+:- use_module(library(http/http_error)).
 :- use_module(library(uri)).
 
 :- http_handler(root(list_modules), list_modules, []).
