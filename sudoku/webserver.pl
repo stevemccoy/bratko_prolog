@@ -3,6 +3,8 @@
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_error)).
+:- use_module(library(http/http_json)).
+:- use_module(library(http/json_convert)).
 :- use_module(library(uri)).
 
 :- http_handler(root(list_modules), list_modules, []).
@@ -14,6 +16,8 @@ server(Port) :-
 
 :- consult('sudoku').
 
+:-json_object
+    puzzle(input:string, output:string).
 
 % Hello World.
 
@@ -59,11 +63,20 @@ list_modules(_Request) :-
 
 % Sudoku solver.
 handle_sudoku(Request) :-
-	http_parameters(Request,
-		[ puzzle(InputString, [])
-		]),
-	puzzle_handler(InputString, OutputString),
-    reply_html_page(title('Sudoku Solver'),
-    	[	h2(InputString),
-    		h2(OutputString)
-		]).
+    % Extract the puzzle input string from request URL.
+    member(search(Params), Request),
+    member(input = InputAtom, Params),
+    atom_string(InputAtom, InputString),
+    % Solve puzzle.
+    puzzle_handler(InputString, OutputString),
+    % Display input and solution.
+    prolog_to_json(puzzle(InputString, OutputString), JsonResponse),
+    reply_json(JsonResponse).
+
+    %% reply_html_page(title('Sudoku'), [
+    %%     h1('Sudoku Solution'),
+    %%     p(['This example demonstrates solving Sudoku puzzles as a service.']),
+    %%     p(['Input String: ', InputString]),
+    %%     p(['Output String: ', OutputString])
+    %% ]).
+
