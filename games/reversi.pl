@@ -9,19 +9,15 @@
 % Game position representation:
 % Grid of elements from (b,w,s)
 
-
 row_coordinate(R) :-
 	member(R, [1,2,3,4,5,6,7,8]).
-
 
 column_coordinate(C) :-
 	member(C, [1,2,3,4,5,6,7,8]).
 
-
 valid_coordinate(R/C) :-
 	row_coordinate(R),
 	column_coordinate(C).
-
 
 position([
 	[s,s,s,s,s,s,s,s],
