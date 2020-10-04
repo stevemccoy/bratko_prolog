@@ -54,3 +54,42 @@ tsp(Path, Cost) :-
 4. heuristic function to estimate minimum remaining path distance --> admissible h(N).
 5. 
 
+% Travelling salesman problem
+
+% Cost function, c(From, To, Cost).
+% Symmetrical:
+c(From, To, Cost) :-
+    c(To, From, Cost).
+
+c(atlanta, boston, 936).
+
+% Path cost for Hamiltonian, g(Path, Cost).
+g([], 0).
+g([_], 0).
+g([H1, H2], CostOut) :-
+    c(H1, H2, C1),
+    c(H2, H1, C2),
+    CostOut is C1 + C2.
+g([H1, H2 | Tail], CostOut) :-
+    g([H2 | Tail], Cost1),
+    c(H1, H2, C1),
+
+    c(H1, )
+
+    CostOut is Cost2 - C2.
+
+
+% extend(InPath, InCost, OutPath, OutCost) :-
+extend([H1], 0, [H1, H2], OutCost) :-
+    c(H1, H2, C1),
+    OutCost is 2 * C1.
+
+extend([H1, H2 | Tail], InCost, [H1, X, H2 | Tail], OutCost) :-
+    c(H1, X, C2),
+    c(X, H2, C3),
+    not(member(X, Tail)),
+    c(H1, H2, C1),
+    OutCost is InCost - C1 + C2 + C3.
+
+% 1. Set up single starting point [H] for paths.
+% 2. extend
