@@ -28,6 +28,7 @@ del(Item, [First | List1], [First | List2]) :-
 % Board state something like:
 % 1. Piece positions.
 % 2. Rooks and King moved flags?
+% 3. Next move number and who to move next?
 % 
 % board([[Col, Row, Player, Piece], ...])
 
@@ -42,6 +43,8 @@ del(Item, [First | List1], [First | List2]) :-
 empty_square([C, R], Board) :-
 	not(member([C, R, _, _], Board)).
 
+
+
 valid_coord(C) :-
 	member(C, [1,2,3,4,5,6,7,8]).
 
@@ -49,16 +52,33 @@ valid_coord(C, R) :-
 	on_board(C),
 	on_board(R).
 
-% ray(Board, From, Direction, To)
+% ray(Board, Limit, From, Direction, To)
+% Extend a ray from the From position in a straight line given by Direction to unoccupied square To.
 % On given Board, square To is reachable from square From by a straight line move 
 % in the given Direction.
-ray(Board, Limit, [C1, R1], [DC, DR], [C2, R2]) :-
-	member(N, [1,2,3,4,5,6,7,8]),
+
+% Board 		Starting position of the board.
+% Limit 		Maximum distance for piece to move.
+% From  		Starting position for piece.
+% Player 		Which side is making the move (w, b)?
+% Direction 	Vector for moving the piece (multiples of).
+% To  			End position of the piece.
+% PieceTaken 	If the move involves taking a piece, which is it?
+
+ray(Board, Limit, [C1, R1], Player1, [DC, DR], [C2, R2], PieceTaken) :-
+	member(N, [1,2,3,4,5,6,7]),
 	Limit >= N,
 	C2 is C1 + DC * N,
 	R2 is R1 + DR * N,
 	valid_coord(C2, R2),
-	empty_square([C2, R2], Board).
+	(	% Destination is empty.
+		empty_square([C2, R2], Board)
+		;
+		% If can take a piece, make sure it is opposing player and not the king.
+		member([C2, R2, Player2, PieceTaken], Board),
+		Player1 \== Player2,
+		PieceTaken \== k
+	).
 
 piece_directions(r, [[1,0], [-1,0], [0,1], [0,-1]]).
 piece_directions(b, [[-1,-1], [-1,1], [1,-1], [1,1]]).
